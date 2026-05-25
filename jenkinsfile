@@ -1,0 +1,49 @@
+pipeline {
+    agent { label 'docker-agent' }
+
+    environment {
+        DOCKER_USER = "matanlahmi"
+        IMAGE_NAME  = "${env.JOB_NAME.toLowerCase()}"
+        IMAGE_TAG   = "${env.BUILD_NUMBER}"
+        FULL_IMAGE  = "${DOCKER_USER}/${IMAGE_NAME}:${IMAGE_TAG}"
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
+        }
+
+        stage('Flake8') {
+            steps {
+                sh 'flake8 .'
+            }
+        }
+
+        stage('Docker Build') {
+            steps {
+                sh "docker build -t ${FULL_IMAGE} ."
+            }
+        }
+
+        stage('Push') {
+            steps {
+                withCredentials([usernamePassword(
+                    credentialsId: 'docker-hub-credentials',
+                    usernameVariable: 'DOCKER_USER_VAR',
+                    passwordVariable: 'DOCKER_PASS'
+                )]) {
+                    sh 'echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER_VAR" --password-stdin'
+                    sh "docker push ${FULL_IMAGE}"
+                }
+            }
+        }
+    }
+
+    post {
+        always {
+            cleanWs()
+        }
+    }
+}

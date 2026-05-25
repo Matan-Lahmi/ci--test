@@ -40,6 +40,14 @@ pipeline {
             }
         }
     }
+stage('Deploy') {
+    steps {
+        sh "docker pull ${FULL_IMAGE}"
+        sh "docker stop ${IMAGE_NAME} || true"
+        sh "docker rm ${IMAGE_NAME} || true"
+        sh "docker run -d --name ${IMAGE_NAME} ${FULL_IMAGE}"
+    }
+}
 
     post {
         always {
